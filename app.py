@@ -168,11 +168,14 @@ def get_spreadsheet(url, sheet_name):
 
     try:
 
+        st.write("取得URL:", url)
+        st.write("取得シート:", sheet_name)
+
         client = get_gspread_client()
 
-        spreadsheet = client.open_by_url(url)
+        spreadsheet = client.open_by_url(str(url).strip())
 
-        worksheet = spreadsheet.worksheet(sheet_name)
+        worksheet = spreadsheet.worksheet(str(sheet_name).strip())
 
         return worksheet
 
@@ -181,7 +184,6 @@ def get_spreadsheet(url, sheet_name):
         st.error(f"シート取得エラー: {e}")
 
         return None
-
 # =========================================
 # 収支読み込み
 # =========================================
