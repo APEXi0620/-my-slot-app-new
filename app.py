@@ -145,19 +145,35 @@ SPEC_DATA = {
 @st.cache_resource
 def get_gspread_client():
 
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    try:
 
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"],
-    scope
-)
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
 
-    client = gspread.authorize(creds)
+        creds_dict = dict(st.secrets["gcp_service_account"])
 
-    return client
+        st.write("Secrets OK")
+
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            creds_dict,
+            scope
+        )
+
+        st.write("Credentials OK")
+
+        client = gspread.authorize(creds)
+
+        st.write("Client OK")
+
+        return client
+
+    except Exception as e:
+
+        st.error(f"gspread接続エラー: {e}")
+
+        return None
 
 # =========================================
 # シート取得
@@ -168,14 +184,22 @@ def get_spreadsheet(url, sheet_name):
 
     try:
 
-        st.write("取得URL:", url)
-        st.write("取得シート:", sheet_name)
+        st.write(url)
+        st.write(sheet_name)
 
         client = get_gspread_client()
 
-        spreadsheet = client.open_by_url(str(url).strip())
+        if client is None:
+            st.error("client取得失敗")
+            return None
 
-        worksheet = spreadsheet.worksheet(str(sheet_name).strip())
+        spreadsheet = client.open_by_url(url)
+
+        st.write("spreadsheet OK")
+
+        worksheet = spreadsheet.worksheet(sheet_name)
+
+        st.write("worksheet OK")
 
         return worksheet
 
