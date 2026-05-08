@@ -57,15 +57,10 @@ div[data-testid="stFormSubmitButton"] button {
 # スプレッドシートURL
 # =========================================
 
-MAIN_SPREADSHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734/edit#gid=0"
-)
+MAIN_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734/edit#gid=0"
 
-DATA_SPREADSHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q/edit#gid=2127100834"
-)
+DATA_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q/edit#gid=2127100834"
+
 
 # =========================================
 # シート名
@@ -342,29 +337,25 @@ st.title("🎰 5.5スロ分析ツール")
 # スプレッドシートリンク
 # =========================================
 
-st.write(MAIN_SPREADSHEET_URL)
-st.write(DATA_SPREADSHEET_URL)
-
 st.markdown("### 📄 スプレッドシート")
 
-col_link1, col_link2 = st.columns(2)
+st.markdown(
+    f"""
+    <a href="{MAIN_SPREADSHEET_URL}" target="_blank">
+        📊 収支表を開く
+    </a>
+    """,
+    unsafe_allow_html=True
+)
 
-with col_link1:
-
-    st.link_button(
-        "📊 収支表を開く",
-        MAIN_SPREADSHEET_URL,
-        use_container_width=True
-    )
-
-with col_link2:
-
-    st.link_button(
-        "🗂️ データ集積シートを開く",
-        DATA_SPREADSHEET_URL,
-        use_container_width=True
-    )
-
+st.markdown(
+    f"""
+    <a href="{DATA_SPREADSHEET_URL}" target="_blank">
+        🗂️ データ集積シートを開く
+    </a>
+    """,
+    unsafe_allow_html=True
+)
 # =========================================
 # 機種一覧取得
 # =========================================
