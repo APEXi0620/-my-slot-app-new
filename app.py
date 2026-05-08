@@ -215,8 +215,8 @@ def get_spreadsheet(url, sheet_name):
 def load_shuushi():
 
     sheet = get_spreadsheet(
-        MAIN_SPREADSHEET_URL,
-        MAIN_SHEET_NAME
+        DATA_SPREADSHEET_URL,
+        DATA_ALL_SHEET
     )
 
     if sheet:
