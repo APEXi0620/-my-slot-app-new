@@ -57,11 +57,27 @@ div[data-testid="stFormSubmitButton"] button {
 # スプレッドシートID
 # =========================================
 
+MAIN_SPREADSHEET_ID = "1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734"
+
 DATA_SPREADSHEET_ID = "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q"
+
+# =========================================
+# スプレッドシートリンク
+# =========================================
+
+MAIN_SPREADSHEET_URL = (
+    f"https://docs.google.com/spreadsheets/d/{MAIN_SPREADSHEET_ID}/edit#gid=0"
+)
+
+DATA_SPREADSHEET_URL = (
+    f"https://docs.google.com/spreadsheets/d/{DATA_SPREADSHEET_ID}/edit#gid=0"
+)
 
 # =========================================
 # シート名
 # =========================================
+
+MAIN_SHEET_NAME = "シート1"
 
 DATA_ALL_SHEET = "全履歴"
 
@@ -97,41 +113,6 @@ SPEC_DATA = {
     "ファミスタ回胴版！！": [182.0, 179.6, 0, 171.1, 161.8, 150.3],
     "北斗の拳": [383.4, 370.5, 347.1, 297.8, 258.7, 235.1],
     "押忍！番長4": [259.5, 256.3, 247.0, 227.0, 203.4, 198.8],
-    "聖闘士星矢 海皇覚醒ED": [363.3, 353.5, 335.7, 303.4, 275.9, 244.6],
-    "ToLOVEるダークネス": [355.3, 344.9, 321.7, 280.9, 255.4, 230.1],
-    "革命機ヴァルヴレイヴD": [519.0, 516.0, 490.0, 434.0, 414.0, 401.0],
-    "モンスターハンターライズ": [309.8, 297.4, 281.3, 253.9, 233.1, 212.0],
-    "からくりサーカスG": [564.0, 543.0, 514.0, 469.0, 436.0, 409.0],
-    "炎炎ノ消防隊": [243.2, 233.7, 223.5, 201.7, 188.0, 173.8],
-    "ソードアート・オンラインB2": [412.2, 396.1, 375.0, 319.4, 286.0, 247.9],
-    "エウレカセブンHIEVO": [195.4, 191.0, 182.2, 169.1, 158.4, 143.7],
-    "ラブ嬢3M4": [252.3, 246.5, 235.1, 218.4, 198.8, 178.2],
-    "バジリスク絆2～天膳～": [247.3, 239.9, 230.1, 206.8, 187.3, 170.3],
-    "GI優駿倶楽部黄金KD": [336.8, 328.7, 313.1, 276.4, 252.1, 219.6],
-    "キングパルサーSLCC": [151.0, 147.2, 144.5, 137.9, 131.7, 121.7],
-    "ストライク・ザ・ブラッドZC": [199.1, 195.1, 186.2, 167.3, 150.3, 133.4],
-    "戦姫絶唱シンフォギア 正義の歌": [295.0, 290.1, 281.4, 253.3, 234.3, 201.2],
-    "防振り": [319.4, 307.7, 289.4, 244.6, 221.7, 199.0],
-    "スマスロ真北斗無双": [381.1, 372.4, 355.6, 310.3, 279.1, 248.3],
-    "ゾンビランドサガA1": [164.5, 161.4, 157.0, 145.4, 133.3, 118.5],
-    "スマスロ頭文字D2nd": [317.0, 311.2, 294.6, 258.8, 235.2, 207.2],
-    "バンドリS11": [332.3, 324.9, 311.6, 283.6, 257.7, 224.2],
-    "鬼武者3XA": [319.3, 311.1, 298.5, 272.5, 244.1, 212.1],
-    "スマスロ 聖戦士ダンバイン": [342.3, 335.7, 321.4, 288.6, 256.4, 219.3],
-    "ありふれた職業で世界最強": [321.1, 310.5, 292.3, 256.4, 233.1, 201.9],
-    "シン・エヴァンゲリオン": [345.5, 334.3, 312.2, 274.5, 253.1, 221.0],
-    "SHAMAN KING": [182.0, 178.5, 172.3, 155.4, 140.1, 125.5],
-    "スマスロカイジ 狂宴": [315.4, 308.2, 291.5, 266.4, 231.0, 199.5],
-    "ヨシムネS": [250.6, 243.2, 222.1, 201.4, 185.3, 166.2],
-    "麻雀物語S2": [255.4, 248.1, 231.5, 201.3, 182.1, 163.4],
-    "東京リベンジャーズ": [342.0, 334.0, 321.0, 289.0, 254.0, 218.0],
-    "咲-Saki-頂上決戦YR": [224.4, 215.1, 201.2, 188.4, 175.2, 160.1],
-    "いろはに愛姫PA5": [158.3, 158.3, 158.3, 0, 0, 149.3],
-    "HEY！エリートサラリーマン鏡PA4": [273.1, 263.5, 251.0, 222.8, 193.0, 183.0],
-    "スマスロ押忍！番長ZERO": [245.4, 237.4, 224.2, 203.1, 183.5, 169.5],
-    "バイオハザード5ZE": [310.0, 295.0, 281.0, 252.0, 226.0, 193.0],
-    "ルパン三世大航海者の秘宝": [188.3, 183.1, 176.2, 163.8, 149.6, 131.6],
-    "ドルアーガの塔": [209.0, 198.0, 181.0, 163.0, 150.0, 135.0],
 }
 
 # =========================================
@@ -160,19 +141,24 @@ def get_gspread_client():
 # =========================================
 
 @st.cache_resource
-def get_spreadsheet(sheet_name):
+def get_spreadsheet(spreadsheet_id, sheet_name):
 
     try:
 
+        st.write("Secrets OK")
+
         client = get_gspread_client()
 
-        spreadsheet = client.open_by_key(
-            DATA_SPREADSHEET_ID
-        )
+        st.write("Credentials OK")
+        st.write("Client OK")
 
-        worksheet = spreadsheet.worksheet(
-            sheet_name
-        )
+        spreadsheet = client.open_by_key(spreadsheet_id)
+
+        st.write("Spreadsheet OK")
+
+        worksheet = spreadsheet.worksheet(sheet_name)
+
+        st.write("Worksheet OK")
 
         return worksheet
 
@@ -183,16 +169,17 @@ def get_spreadsheet(sheet_name):
         return None
 
 # =========================================
-# 全履歴読み込み
+# 収支読み込み
 # =========================================
 
-def load_history():
+def load_shuushi():
 
     sheet = get_spreadsheet(
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
-    if sheet:
+    if sheet is not None:
 
         data = sheet.get_all_records()
 
@@ -232,11 +219,7 @@ def get_machine_list():
         "バイオ",
         "カバネリ",
         "モンハン",
-        "ハイパーラッシュ",
-        "からくり",
-        "炎炎",
-        "ヴァルヴレイヴ",
-        "エヴァ"
+        "ハイパーラッシュ"
     ]
 
     ng_words = [
@@ -333,6 +316,59 @@ with st.sidebar:
 st.title("🎰 5.5スロ分析ツール")
 
 # =========================================
+# スプレッドシートリンク
+# =========================================
+
+st.markdown("### 📄 スプレッドシート")
+
+col_link1, col_link2 = st.columns(2)
+
+with col_link1:
+
+    st.link_button(
+        "📊 収支表を開く",
+        MAIN_SPREADSHEET_URL,
+        use_container_width=True
+    )
+
+with col_link2:
+
+    st.link_button(
+        "🗂️ データ集積シートを開く",
+        DATA_SPREADSHEET_URL,
+        use_container_width=True
+    )
+
+# =========================================
+# 機種一覧取得
+# =========================================
+
+st.divider()
+
+st.subheader("🏪 マルハン箱崎店 機種一覧")
+
+if st.button("機種一覧取得"):
+
+    try:
+
+        machine_list = get_machine_list()
+
+        if machine_list:
+
+            st.success(f"{len(machine_list)}件取得")
+
+            for machine in machine_list:
+                st.write(machine)
+
+        else:
+
+            st.warning("取得失敗")
+
+    except Exception as e:
+
+        st.error(f"取得エラー: {e}")
+
+# =========================================
 # 台データ入力
 # =========================================
 
@@ -423,12 +459,13 @@ with st.form("slot_form", clear_on_submit=True):
         ]
 
         main_sheet = get_spreadsheet(
+            DATA_SPREADSHEET_ID,
             DATA_ALL_SHEET
         )
 
         if main_sheet:
 
-            main_sheet.append_rows([row])
+            main_sheet.append_row(row)
 
         key = (machine, str(dai))
 
@@ -437,12 +474,13 @@ with st.form("slot_form", clear_on_submit=True):
             target_sheet_name = SHEET_MAPPING[key]
 
             target_sheet = get_spreadsheet(
+                DATA_SPREADSHEET_ID,
                 target_sheet_name
             )
 
             if target_sheet:
 
-                target_sheet.append_rows([row])
+                target_sheet.append_row(row)
 
         st.success("保存しました！")
 
@@ -456,13 +494,13 @@ st.divider()
 
 st.subheader("📊 収支履歴")
 
-df = load_history()
+df = load_shuushi()
 
 if not df.empty:
 
     st.dataframe(
         df.iloc[::-1],
-        width="stretch",
+        use_container_width=True,
         hide_index=True
     )
 
@@ -481,6 +519,7 @@ st.subheader("📈 累計差枚グラフ")
 try:
 
     history_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -502,8 +541,7 @@ try:
             ).fillna(0)
 
             history_df["累計差枚"] = (
-                history_df["差枚"]
-                .cumsum()
+                history_df["差枚"].cumsum()
             )
 
             st.line_chart(
@@ -525,6 +563,7 @@ st.subheader("🎰 機種別分析")
 try:
 
     machine_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -547,12 +586,15 @@ try:
 
             result = (
                 machine_df
-                .groupby("機種名")["差枚"]
+                .groupby("機種")["差枚"]
                 .sum()
                 .sort_values(ascending=False)
             )
 
-            st.dataframe(result)
+            st.dataframe(
+                result,
+                use_container_width=True
+            )
 
 except Exception as e:
 
@@ -569,6 +611,7 @@ st.subheader("🔢 台番号別分析")
 try:
 
     dai_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -596,7 +639,10 @@ try:
                 .sort_values(ascending=False)
             )
 
-            st.dataframe(result)
+            st.dataframe(
+                result,
+                use_container_width=True
+            )
 
 except Exception as e:
 
