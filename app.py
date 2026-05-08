@@ -54,19 +54,15 @@ div[data-testid="stFormSubmitButton"] button {
 """, unsafe_allow_html=True)
 
 # =========================================
-# スプレッドシートURL
+# スプレッドシートID
 # =========================================
 
-MAIN_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734/edit#gid=0"
-
-DATA_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q/edit#gid=2127100834"
-
+DATA_SPREADSHEET_ID = "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q"
 
 # =========================================
 # シート名
 # =========================================
 
-MAIN_SHEET_NAME = "全履歴"
 DATA_ALL_SHEET = "全履歴"
 
 # =========================================
@@ -90,6 +86,7 @@ SHEET_MAPPING = {
 # =========================================
 
 SPEC_DATA = {
+
     "ミスタージャグラー": [163.8, 159.1, 153.8, 142.5, 131.6, 118.7],
     "アイムジャグラーEX": [168.5, 159.1, 150.3, 140.9, 135.4, 127.5],
     "マイジャグラーV": [163.8, 159.1, 155.3, 144.0, 135.4, 114.6],
@@ -145,61 +142,34 @@ SPEC_DATA = {
 @st.cache_resource
 def get_gspread_client():
 
-    try:
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"],
+        scope
+    )
 
-        creds_dict = dict(st.secrets["gcp_service_account"])
+    client = gspread.authorize(creds)
 
-        st.write("Secrets OK")
-
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(
-            creds_dict,
-            scope
-        )
-
-        st.write("Credentials OK")
-
-        client = gspread.authorize(creds)
-
-        st.write("Client OK")
-
-        return client
-
-    except Exception as e:
-
-        st.error(f"gspread接続エラー: {e}")
-
-        return None
+    return client
 
 # =========================================
 # シート取得
 # =========================================
 
 @st.cache_resource
-def get_spreadsheet(url, sheet_name):
+def get_spreadsheet(spreadsheet_id, sheet_name):
 
     try:
 
-        st.write(url)
-        st.write(sheet_name)
-
         client = get_gspread_client()
 
-        if client is None:
-            st.error("client取得失敗")
-            return None
-
-        spreadsheet = client.open_by_url(url)
-
-        st.write("spreadsheet OK")
+        spreadsheet = client.open_by_key(spreadsheet_id)
 
         worksheet = spreadsheet.worksheet(sheet_name)
-
-        st.write("worksheet OK")
 
         return worksheet
 
@@ -208,6 +178,7 @@ def get_spreadsheet(url, sheet_name):
         st.error(f"シート取得エラー: {e}")
 
         return None
+
 # =========================================
 # 収支読み込み
 # =========================================
@@ -215,7 +186,7 @@ def get_spreadsheet(url, sheet_name):
 def load_shuushi():
 
     sheet = get_spreadsheet(
-        DATA_SPREADSHEET_URL,
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -229,187 +200,10 @@ def load_shuushi():
     return pd.DataFrame()
 
 # =========================================
-# 機種一覧取得
-# =========================================
-
-def get_machine_list():
-
-    url = "https://www.p-world.co.jp/fukuoka/maruhan-hakozaki.htm"
-
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    response = requests.get(url, headers=headers)
-
-    response.encoding = response.apparent_encoding
-
-    soup = BeautifulSoup(response.text, "lxml")
-
-    text = soup.get_text("\n")
-
-    machines = []
-
-    keywords = [
-        "スマスロ",
-        "パチスロ",
-        "ジャグラー",
-        "北斗",
-        "番長",
-        "バイオ",
-        "カバネリ",
-        "モンハン",
-        "ハイパーラッシュ",
-        "からくり",
-        "炎炎",
-        "ヴァルヴレイヴ",
-        "エヴァ"
-    ]
-
-    ng_words = [
-        "ぱちんこ",
-        "P ",
-        "e ",
-        "LT"
-    ]
-
-    for line in text.splitlines():
-
-        line = line.strip()
-
-        if not line:
-            continue
-
-        skip = False
-
-        for ng in ng_words:
-
-            if ng in line:
-                skip = True
-                break
-
-        if skip:
-            continue
-
-        for keyword in keywords:
-
-            if keyword in line:
-                machines.append(line)
-                break
-
-    return sorted(list(set(machines)))
-
-# =========================================
-# サイドバー
-# =========================================
-
-with st.sidebar:
-
-    st.header("🎰 設定推測")
-
-    target_model = st.selectbox(
-        "機種を選択",
-        ["選択なし"] + sorted(list(SPEC_DATA.keys()))
-    )
-
-    kaiten = st.number_input(
-        "総回転数",
-        min_value=1,
-        value=1000
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        s_big = st.number_input("BIG回数", min_value=0)
-
-    with col2:
-        s_reg = st.number_input("REG回数", min_value=0)
-
-    if (s_big + s_reg) > 0:
-
-        gassan = kaiten / (s_big + s_reg)
-
-        st.write(f"現在の合算: 1/{gassan:.1f}")
-
-        if target_model != "選択なし":
-
-            specs = SPEC_DATA[target_model]
-
-            best_diff = 999
-            likely_setting = 1
-
-            for i, val in enumerate(specs):
-
-                if val == 0:
-                    continue
-
-                diff = abs(gassan - val)
-
-                if diff < best_diff:
-
-                    best_diff = diff
-                    likely_setting = i + 1
-
-            st.success(f"推定設定: 設定{likely_setting}")
-
-# =========================================
 # タイトル
 # =========================================
 
 st.title("🎰 5.5スロ分析ツール")
-
-# =========================================
-# スプレッドシートリンク
-# =========================================
-
-st.markdown("### 📄 スプレッドシート")
-
-st.markdown(
-    f"""
-    <a href="{MAIN_SPREADSHEET_URL}" target="_blank">
-        📊 収支表を開く
-    </a>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f"""
-    <a href="{DATA_SPREADSHEET_URL}" target="_blank">
-        🗂️ データ集積シートを開く
-    </a>
-    """,
-    unsafe_allow_html=True
-)
-# =========================================
-# 機種一覧取得
-# =========================================
-
-st.divider()
-
-st.subheader("🏪 マルハン箱崎店 機種一覧")
-
-if st.button("機種一覧取得"):
-
-    try:
-
-        machine_list = get_machine_list()
-
-        if machine_list:
-
-            st.success(f"{len(machine_list)}件取得")
-
-            for machine in machine_list:
-                st.write(machine)
-
-        else:
-
-            st.warning("取得失敗")
-
-    except Exception as e:
-
-        st.error(f"取得エラー: {e}")
 
 # =========================================
 # 台データ入力
@@ -502,17 +296,13 @@ with st.form("slot_form", clear_on_submit=True):
         ]
 
         main_sheet = get_spreadsheet(
-            DATA_SPREADSHEET_URL,
+            DATA_SPREADSHEET_ID,
             DATA_ALL_SHEET
         )
 
         if main_sheet:
 
-            main_sheet.append_rows([row])
-
-        # =========================================
-        # 台別振り分け
-        # =========================================
+            main_sheet.append_row(row)
 
         key = (machine, str(dai))
 
@@ -521,13 +311,13 @@ with st.form("slot_form", clear_on_submit=True):
             target_sheet_name = SHEET_MAPPING[key]
 
             target_sheet = get_spreadsheet(
-                DATA_SPREADSHEET_URL,
+                DATA_SPREADSHEET_ID,
                 target_sheet_name
             )
 
             if target_sheet:
 
-                target_sheet.append_rows([row])
+                target_sheet.append_row(row)
 
         st.success("保存しました！")
 
@@ -566,7 +356,7 @@ st.subheader("📈 累計差枚グラフ")
 try:
 
     history_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_URL,
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -600,7 +390,6 @@ except Exception as e:
 
     st.error(f"グラフエラー: {e}")
 
-
 # =========================================
 # 機種別分析
 # =========================================
@@ -612,7 +401,7 @@ st.subheader("🎰 機種別分析")
 try:
 
     machine_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_URL,
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -646,7 +435,6 @@ except Exception as e:
 
     st.error(f"機種別分析エラー: {e}")
 
-
 # =========================================
 # 台番号別分析
 # =========================================
@@ -658,7 +446,7 @@ st.subheader("🔢 台番号別分析")
 try:
 
     dai_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_URL,
+        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
