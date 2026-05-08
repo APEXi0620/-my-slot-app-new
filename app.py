@@ -139,7 +139,7 @@ SPEC_DATA = {
 # Google Sheets接続
 # =========================================
 
-@st.cache_resource
+
 def get_gspread_client():
 
     scope = [
@@ -160,7 +160,7 @@ def get_gspread_client():
 # シート取得
 # =========================================
 
-@st.cache_resource
+
 def get_spreadsheet(spreadsheet_id, sheet_name):
 
     try:
