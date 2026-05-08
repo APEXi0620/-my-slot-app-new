@@ -62,15 +62,17 @@ MAIN_SPREADSHEET_ID = "1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734"
 DATA_SPREADSHEET_ID = "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q"
 
 # =========================================
-# スプレッドシートリンク
+# スプレッドシートURL
 # =========================================
 
 MAIN_SPREADSHEET_URL = (
-    f"https://docs.google.com/spreadsheets/d/{MAIN_SPREADSHEET_ID}/edit#gid=0"
+    "https://docs.google.com/spreadsheets/d/"
+    "1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734/edit#gid=0"
 )
 
 DATA_SPREADSHEET_URL = (
-    f"https://docs.google.com/spreadsheets/d/{DATA_SPREADSHEET_ID}/edit#gid=0"
+    "https://docs.google.com/spreadsheets/d/"
+    "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q/edit#gid=0"
 )
 
 # =========================================
@@ -145,20 +147,11 @@ def get_spreadsheet(spreadsheet_id, sheet_name):
 
     try:
 
-        st.write("Secrets OK")
-
         client = get_gspread_client()
-
-        st.write("Credentials OK")
-        st.write("Client OK")
 
         spreadsheet = client.open_by_key(spreadsheet_id)
 
-        st.write("Spreadsheet OK")
-
         worksheet = spreadsheet.worksheet(sheet_name)
-
-        st.write("Worksheet OK")
 
         return worksheet
 
