@@ -86,7 +86,6 @@ SHEET_MAPPING = {
 # =========================================
 
 SPEC_DATA = {
-
     "ミスタージャグラー": [163.8, 159.1, 153.8, 142.5, 131.6, 118.7],
     "アイムジャグラーEX": [168.5, 159.1, 150.3, 140.9, 135.4, 127.5],
     "マイジャグラーV": [163.8, 159.1, 155.3, 144.0, 135.4, 114.6],
@@ -139,7 +138,7 @@ SPEC_DATA = {
 # Google Sheets接続
 # =========================================
 
-
+@st.cache_resource
 def get_gspread_client():
 
     scope = [
@@ -160,16 +159,20 @@ def get_gspread_client():
 # シート取得
 # =========================================
 
-
-def get_spreadsheet(spreadsheet_id, sheet_name):
+@st.cache_resource
+def get_spreadsheet(sheet_name):
 
     try:
 
         client = get_gspread_client()
 
-        spreadsheet = client.open_by_key(spreadsheet_id)
+        spreadsheet = client.open_by_key(
+            DATA_SPREADSHEET_ID
+        )
 
-        worksheet = spreadsheet.worksheet(sheet_name)
+        worksheet = spreadsheet.worksheet(
+            sheet_name
+        )
 
         return worksheet
 
@@ -180,13 +183,12 @@ def get_spreadsheet(spreadsheet_id, sheet_name):
         return None
 
 # =========================================
-# 収支読み込み
+# 全履歴読み込み
 # =========================================
 
-def load_shuushi():
+def load_history():
 
     sheet = get_spreadsheet(
-        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -198,6 +200,131 @@ def load_shuushi():
             return pd.DataFrame(data)
 
     return pd.DataFrame()
+
+# =========================================
+# 機種一覧取得
+# =========================================
+
+def get_machine_list():
+
+    url = "https://www.p-world.co.jp/fukuoka/maruhan-hakozaki.htm"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    response.encoding = response.apparent_encoding
+
+    soup = BeautifulSoup(response.text, "lxml")
+
+    text = soup.get_text("\n")
+
+    machines = []
+
+    keywords = [
+        "スマスロ",
+        "パチスロ",
+        "ジャグラー",
+        "北斗",
+        "番長",
+        "バイオ",
+        "カバネリ",
+        "モンハン",
+        "ハイパーラッシュ",
+        "からくり",
+        "炎炎",
+        "ヴァルヴレイヴ",
+        "エヴァ"
+    ]
+
+    ng_words = [
+        "ぱちんこ",
+        "P ",
+        "e ",
+        "LT"
+    ]
+
+    for line in text.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        skip = False
+
+        for ng in ng_words:
+
+            if ng in line:
+                skip = True
+                break
+
+        if skip:
+            continue
+
+        for keyword in keywords:
+
+            if keyword in line:
+                machines.append(line)
+                break
+
+    return sorted(list(set(machines)))
+
+# =========================================
+# サイドバー
+# =========================================
+
+with st.sidebar:
+
+    st.header("🎰 設定推測")
+
+    target_model = st.selectbox(
+        "機種を選択",
+        ["選択なし"] + sorted(list(SPEC_DATA.keys()))
+    )
+
+    kaiten = st.number_input(
+        "総回転数",
+        min_value=1,
+        value=1000
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        s_big = st.number_input("BIG回数", min_value=0)
+
+    with col2:
+        s_reg = st.number_input("REG回数", min_value=0)
+
+    if (s_big + s_reg) > 0:
+
+        gassan = kaiten / (s_big + s_reg)
+
+        st.write(f"現在の合算: 1/{gassan:.1f}")
+
+        if target_model != "選択なし":
+
+            specs = SPEC_DATA[target_model]
+
+            best_diff = 999
+            likely_setting = 1
+
+            for i, val in enumerate(specs):
+
+                if val == 0:
+                    continue
+
+                diff = abs(gassan - val)
+
+                if diff < best_diff:
+
+                    best_diff = diff
+                    likely_setting = i + 1
+
+            st.success(f"推定設定: 設定{likely_setting}")
 
 # =========================================
 # タイトル
@@ -296,13 +423,12 @@ with st.form("slot_form", clear_on_submit=True):
         ]
 
         main_sheet = get_spreadsheet(
-            DATA_SPREADSHEET_ID,
             DATA_ALL_SHEET
         )
 
         if main_sheet:
 
-            main_sheet.append_row(row)
+            main_sheet.append_rows([row])
 
         key = (machine, str(dai))
 
@@ -311,13 +437,12 @@ with st.form("slot_form", clear_on_submit=True):
             target_sheet_name = SHEET_MAPPING[key]
 
             target_sheet = get_spreadsheet(
-                DATA_SPREADSHEET_ID,
                 target_sheet_name
             )
 
             if target_sheet:
 
-                target_sheet.append_row(row)
+                target_sheet.append_rows([row])
 
         st.success("保存しました！")
 
@@ -331,7 +456,7 @@ st.divider()
 
 st.subheader("📊 収支履歴")
 
-df = load_shuushi()
+df = load_history()
 
 if not df.empty:
 
@@ -356,7 +481,6 @@ st.subheader("📈 累計差枚グラフ")
 try:
 
     history_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -401,7 +525,6 @@ st.subheader("🎰 機種別分析")
 try:
 
     machine_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
@@ -424,7 +547,7 @@ try:
 
             result = (
                 machine_df
-                .groupby("機種")["差枚"]
+                .groupby("機種名")["差枚"]
                 .sum()
                 .sort_values(ascending=False)
             )
@@ -446,7 +569,6 @@ st.subheader("🔢 台番号別分析")
 try:
 
     dai_sheet = get_spreadsheet(
-        DATA_SPREADSHEET_ID,
         DATA_ALL_SHEET
     )
 
