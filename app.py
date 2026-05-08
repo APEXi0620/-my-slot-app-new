@@ -71,7 +71,7 @@ DATA_SPREADSHEET_URL = (
 # シート名
 # =========================================
 
-MAIN_SHEET_NAME = "シート1"
+MAIN_SHEET_NAME = "全履歴"
 DATA_ALL_SHEET = "全履歴"
 
 # =========================================
@@ -155,7 +155,10 @@ def get_gspread_client():
         "https://www.googleapis.com/auth/drive"
     ]
 
-    creds = ServiceAccountCredentials.from_json_key_dict(st.secrets["gcp_service_account"], scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"],
+    scope
+)
 
     client = gspread.authorize(creds)
 
