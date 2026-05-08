@@ -1,14 +1,99 @@
 import streamlit as st
 import pandas as pd
 import gspread
-from google.oauth2.service_account import Credentials
+import requests
+
+from bs4 import BeautifulSoup
+from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-import os
 
-# --- 1. 基本設定 ---
-SLOT_TANKA = 5.5
+# =========================================
+# Streamlit設定
+# =========================================
 
-# 全機種スペックデータ (一切の省略なし)
+st.set_page_config(
+    page_title="5.5スロ分析ツール",
+    layout="wide"
+)
+
+# =========================================
+# CSS
+# =========================================
+
+st.markdown("""
+<style>
+
+.stApp {
+    background-color: black;
+    color: white;
+}
+
+section[data-testid="stSidebar"] {
+    background-color: black;
+}
+
+h1, h2, h3, p, label {
+    color: white !important;
+}
+
+div.stButton > button {
+    background-color: #0000ff !important;
+    color: white !important;
+    font-weight: bold !important;
+    border-radius: 10px !important;
+}
+
+div[data-testid="stFormSubmitButton"] button {
+    background-color: #0000ff !important;
+    color: white !important;
+    font-weight: bold !important;
+    border-radius: 10px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================
+# スプレッドシートURL
+# =========================================
+
+MAIN_SPREADSHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "1lx_MZivY0Bzdevh3w86Xq8gB5R99b4R0niR0YySx734/edit#gid=0"
+)
+
+DATA_SPREADSHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "12fr6cSz-oLIx7nm-32yeml2RSMhwEnfwLqgCKASiE9Q/edit#gid=2127100834"
+)
+
+# =========================================
+# シート名
+# =========================================
+
+MAIN_SHEET_NAME = "シート1"
+DATA_ALL_SHEET = "全履歴"
+
+# =========================================
+# 台別シートマッピング
+# =========================================
+
+SHEET_MAPPING = {
+
+    ("ハイパーラッシュ", "622"): "ハイパーラッシュ622",
+    ("ハイパーラッシュ", "623"): "ハイパーラッシュ623",
+
+    ("カバネリ", "625"): "カバネリ625",
+    ("カバネリ", "626"): "カバネリ626",
+    ("カバネリ", "627"): "カバネリ627",
+    ("カバネリ", "629"): "カバネリ629",
+    ("カバネリ", "630"): "カバネリ630",
+}
+
+# =========================================
+# 設定推測データ
+# =========================================
+
 SPEC_DATA = {
     "ミスタージャグラー": [163.8, 159.1, 153.8, 142.5, 131.6, 118.7],
     "アイムジャグラーEX": [168.5, 159.1, 150.3, 140.9, 135.4, 127.5],
@@ -56,118 +141,530 @@ SPEC_DATA = {
     "バイオハザード5ZE": [310.0, 295.0, 281.0, 252.0, 226.0, 193.0],
     "ルパン三世大航海者の秘宝": [188.3, 183.1, 176.2, 163.8, 149.6, 131.6],
     "ドルアーガの塔": [209.0, 198.0, 181.0, 163.0, 150.0, 135.0],
-    "甲鉄城のカバネリ": [407.9, 404.5, 362.4, 313.2, 290.6, 245.1],
 }
 
-# --- 2. Google Sheets 接続関数 ---
-def get_spreadsheet():
+# =========================================
+# Google Sheets接続
+# =========================================
+
+@st.cache_resource
+def get_gspread_client():
+
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+
+    creds = ServiceAccountCredentials.from_json_key_dict(st.secrets["gcp_service_account"], scope)
+
+    client = gspread.authorize(creds)
+
+    return client
+
+# =========================================
+# シート取得
+# =========================================
+
+@st.cache_resource
+def get_spreadsheet(url, sheet_name):
+
     try:
-        scopes = [
-            'https://googleapis.com',
-            'https://googleapis.com'
-        ]
-        
-        # 【重要】Secretsは使わず、Eclipseのフォルダ内にある credentials.json を直接読み込む
-        if os.path.exists('credentials.json'):
-            creds = Credentials.from_service_account_file('credentials.json', scopes=scopes)
-        else:
-            st.error("【エラー】credentials.json が見つかりません。")
-            return None
-        
-        client = gspread.authorize(creds)
-        return client.open("55slot_data").sheet1
+
+        client = get_gspread_client()
+
+        spreadsheet = client.open_by_url(url)
+
+        worksheet = spreadsheet.worksheet(sheet_name)
+
+        return worksheet
+
     except Exception as e:
-        st.error(f"【接続エラー】: {e}")
+
+        st.error(f"シート取得エラー: {e}")
+
         return None
 
-@st.cache_data(ttl=60)
-def load_data():
-    sheet = get_spreadsheet()
+# =========================================
+# 収支読み込み
+# =========================================
+
+def load_shuushi():
+
+    sheet = get_spreadsheet(
+        MAIN_SPREADSHEET_URL,
+        MAIN_SHEET_NAME
+    )
+
     if sheet:
-        try:
-            data = sheet.get_all_records()
-            if not data:
-                return pd.DataFrame(columns=['日付', '機種名', '投資', '回収枚数', '収支', '備考'])
-            df = pd.DataFrame(data)
-            # 数値型変換
-            for col in ['投資', '回収枚数', '収支']:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-            return df
-        except Exception:
-            return pd.DataFrame()
+
+        data = sheet.get_all_records()
+
+        if data:
+            return pd.DataFrame(data)
+
     return pd.DataFrame()
 
-# --- 3. 画面構成とデザイン ---
-st.set_page_config(page_title="5.5スロ収支Pro", layout="wide")
-st.markdown("""<style>
-    .stApp, [data-testid="stSidebar"] { background-color: #000000 !important; color: #ffffff !important; }
-    input, select, textarea { background-color: #ffffff !important; color: #000000 !important; }
-    label, p, h1, h2, h3 { color: #ffffff !important; }
-    div.stForm [data-testid="stFormSubmitButton"] button {
-        background-color: #0000ff !important; color: #ffffff !important;
-        font-weight: bold !important; width: 100% !important;
+# =========================================
+# 機種一覧取得
+# =========================================
+
+def get_machine_list():
+
+    url = "https://www.p-world.co.jp/fukuoka/maruhan-hakozaki.htm"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
     }
-</style>""", unsafe_allow_html=True)
 
-# サイドバー (設定推測)
+    response = requests.get(url, headers=headers)
+
+    response.encoding = response.apparent_encoding
+
+    soup = BeautifulSoup(response.text, "lxml")
+
+    text = soup.get_text("\n")
+
+    machines = []
+
+    keywords = [
+        "スマスロ",
+        "パチスロ",
+        "ジャグラー",
+        "北斗",
+        "番長",
+        "バイオ",
+        "カバネリ",
+        "モンハン",
+        "ハイパーラッシュ",
+        "からくり",
+        "炎炎",
+        "ヴァルヴレイヴ",
+        "エヴァ"
+    ]
+
+    ng_words = [
+        "ぱちんこ",
+        "P ",
+        "e ",
+        "LT"
+    ]
+
+    for line in text.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        skip = False
+
+        for ng in ng_words:
+
+            if ng in line:
+                skip = True
+                break
+
+        if skip:
+            continue
+
+        for keyword in keywords:
+
+            if keyword in line:
+                machines.append(line)
+                break
+
+    return sorted(list(set(machines)))
+
+# =========================================
+# サイドバー
+# =========================================
+
 with st.sidebar:
+
     st.header("🎰 設定推測")
-    target_model = st.selectbox("機種を選択", ["選択なし"] + sorted(list(SPEC_DATA.keys())))
-    kaiten = st.number_input("総回転数", min_value=1, value=1000)
+
+    target_model = st.selectbox(
+        "機種を選択",
+        ["選択なし"] + sorted(list(SPEC_DATA.keys()))
+    )
+
+    kaiten = st.number_input(
+        "総回転数",
+        min_value=1,
+        value=1000
+    )
+
     col1, col2 = st.columns(2)
-    with col1: s_big = st.number_input("BIG", min_value=0)
-    with col2: s_reg = st.number_input("REG", min_value=0)
+
+    with col1:
+        s_big = st.number_input("BIG回数", min_value=0)
+
+    with col2:
+        s_reg = st.number_input("REG回数", min_value=0)
+
     if (s_big + s_reg) > 0:
+
         gassan = kaiten / (s_big + s_reg)
-        st.write(f"現在の合算: **1/{gassan:.1f}**")
+
+        st.write(f"現在の合算: 1/{gassan:.1f}")
+
         if target_model != "選択なし":
+
             specs = SPEC_DATA[target_model]
-            best_diff, likely = 999, 1
+
+            best_diff = 999
+            likely_setting = 1
+
             for i, val in enumerate(specs):
-                if val == 0: continue
-                if abs(gassan - val) < best_diff:
-                    best_diff, likely = abs(gassan - val), i + 1
-            st.success(f"推定: **設定{likely}** 付近")
 
-# メイン画面
-st.title("🎰 5.5スロ収支表")
-df = load_data()
+                if val == 0:
+                    continue
 
-# 記録入力
-with st.form("input_form", clear_on_submit=True):
-    st.write("### 📝 稼働を記録")
-    c1, c2 = st.columns(2)
-    with c1: date = st.date_input("日付", datetime.now())
-    with c2: name = st.selectbox("機種名", sorted(list(SPEC_DATA.keys())) + ["その他"])
-    c3, c4 = st.columns(2)
-    with c3: toushi = st.number_input("投資(円)", min_value=0, step=500)
-    with c4: maisuu = st.number_input("回収(枚)", min_value=0, step=10)
-    memo = st.text_area("備考")
-    if st.form_submit_button("記録する"):
-        sheet = get_spreadsheet()
-        if sheet:
-            shuushi = int(maisuu * SLOT_TANKA) - toushi
-            sheet.append_row([date.strftime("%m/%d"), name, toushi, maisuu, shuushi, memo])
-            st.cache_data.clear()
-            st.rerun()
+                diff = abs(gassan - val)
 
-# 履歴表示
+                if diff < best_diff:
+
+                    best_diff = diff
+                    likely_setting = i + 1
+
+            st.success(f"推定設定: 設定{likely_setting}")
+
+# =========================================
+# タイトル
+# =========================================
+
+st.title("🎰 5.5スロ分析ツール")
+
+# =========================================
+# スプレッドシートリンク
+# =========================================
+
+st.markdown("### 📄 スプレッドシート")
+
+col_link1, col_link2 = st.columns(2)
+
+with col_link1:
+
+    st.link_button(
+        "📊 収支表を開く",
+        MAIN_SPREADSHEET_URL,
+        use_container_width=True
+    )
+
+with col_link2:
+
+    st.link_button(
+        "🗂️ データ集積シートを開く",
+        DATA_SPREADSHEET_URL,
+        use_container_width=True
+    )
+
+# =========================================
+# 機種一覧取得
+# =========================================
+
+st.divider()
+
+st.subheader("🏪 マルハン箱崎店 機種一覧")
+
+if st.button("機種一覧取得"):
+
+    try:
+
+        machine_list = get_machine_list()
+
+        if machine_list:
+
+            st.success(f"{len(machine_list)}件取得")
+
+            for machine in machine_list:
+                st.write(machine)
+
+        else:
+
+            st.warning("取得失敗")
+
+    except Exception as e:
+
+        st.error(f"取得エラー: {e}")
+
+# =========================================
+# 台データ入力
+# =========================================
+
+st.divider()
+
+with st.form("slot_form", clear_on_submit=True):
+
+    st.subheader("🎰 台データ入力")
+
+    shop = st.selectbox(
+        "店舗",
+        [
+            "マルハン箱崎店",
+            "ワンダーランド",
+            "EVO37"
+        ]
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        machine = st.selectbox(
+            "機種名",
+            sorted(list(SPEC_DATA.keys()))
+        )
+
+    with col2:
+
+        dai = st.number_input(
+            "台番号",
+            min_value=1,
+            step=1
+        )
+
+    col3, col4, col5 = st.columns(3)
+
+    with col3:
+
+        game = st.number_input(
+            "総回転",
+            min_value=0
+        )
+
+    with col4:
+
+        big = st.number_input(
+            "BIG",
+            min_value=0
+        )
+
+    with col5:
+
+        reg = st.number_input(
+            "REG",
+            min_value=0
+        )
+
+    diff = st.number_input(
+        "差枚",
+        step=100
+    )
+
+    memo = st.text_area("メモ")
+
+    submit = st.form_submit_button("記録する")
+
+    if submit:
+
+        total_bonus = big + reg
+
+        if total_bonus > 0:
+            gassan = round(game / total_bonus, 1)
+        else:
+            gassan = 0
+
+        row = [
+            datetime.now().strftime("%Y/%m/%d %H:%M"),
+            shop,
+            machine,
+            str(dai),
+            game,
+            big,
+            reg,
+            diff,
+            gassan,
+            memo
+        ]
+
+        main_sheet = get_spreadsheet(
+            DATA_SPREADSHEET_URL,
+            DATA_ALL_SHEET
+        )
+
+        if main_sheet:
+
+            main_sheet.append_rows([row])
+
+        # =========================================
+        # 台別振り分け
+        # =========================================
+
+        key = (machine, str(dai))
+
+        if key in SHEET_MAPPING:
+
+            target_sheet_name = SHEET_MAPPING[key]
+
+            target_sheet = get_spreadsheet(
+                DATA_SPREADSHEET_URL,
+                target_sheet_name
+            )
+
+            if target_sheet:
+
+                target_sheet.append_rows([row])
+
+        st.success("保存しました！")
+
+        st.rerun()
+
+# =========================================
+# 収支履歴
+# =========================================
+
+st.divider()
+
+st.subheader("📊 収支履歴")
+
+df = load_shuushi()
+
 if not df.empty:
-    st.divider()
-    total = df['収支'].sum()
-    st.markdown(f"## 累計: {int(total):,} 円")
-    st.line_chart(df['収支'].cumsum())
-    st.write("### 📝 履歴一覧")
-    st.dataframe(df.iloc[::-1], use_container_width=True, hide_index=True)
-    with st.expander("データ削除"):
-        sheet = get_spreadsheet()
-        for i, row in df.iterrows():
-            ca, cb = st.columns([0.8, 0.2])
-            ca.write(f"【{row['日付']}】{row['機種名']}")
-            if cb.button("削除", key=f"del_{i}"):
-                sheet.delete_rows(i + 2)
-                st.cache_data.clear()
-                st.rerun()
+
+    st.dataframe(
+        df.iloc[::-1],
+        width="stretch",
+        hide_index=True
+    )
+
 else:
-    st.info("データが読み込めません。credentials.json を GitHub に Push したか確認してください。")
+
+    st.info("データなし")
+
+# =========================================
+# 累計差枚グラフ
+# =========================================
+
+st.divider()
+
+st.subheader("📈 累計差枚グラフ")
+
+try:
+
+    history_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_URL,
+        DATA_ALL_SHEET
+    )
+
+    if history_sheet is not None:
+
+        history_data = history_sheet.get_all_records()
+
+        history_df = pd.DataFrame(history_data)
+
+        if not history_df.empty:
+
+            history_df.columns = (
+                history_df.columns.str.strip()
+            )
+
+            history_df["差枚"] = pd.to_numeric(
+                history_df["差枚"],
+                errors="coerce"
+            ).fillna(0)
+
+            history_df["累計差枚"] = (
+                history_df["差枚"]
+                .cumsum()
+            )
+
+            st.line_chart(
+                history_df["累計差枚"]
+            )
+
+except Exception as e:
+
+    st.error(f"グラフエラー: {e}")
+
+
+# =========================================
+# 機種別分析
+# =========================================
+
+st.divider()
+
+st.subheader("🎰 機種別分析")
+
+try:
+
+    machine_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_URL,
+        DATA_ALL_SHEET
+    )
+
+    if machine_sheet is not None:
+
+        machine_data = machine_sheet.get_all_records()
+
+        machine_df = pd.DataFrame(machine_data)
+
+        if not machine_df.empty:
+
+            machine_df.columns = (
+                machine_df.columns.str.strip()
+            )
+
+            machine_df["差枚"] = pd.to_numeric(
+                machine_df["差枚"],
+                errors="coerce"
+            ).fillna(0)
+
+            result = (
+                machine_df
+                .groupby("機種")["差枚"]
+                .sum()
+                .sort_values(ascending=False)
+            )
+
+            st.dataframe(result)
+
+except Exception as e:
+
+    st.error(f"機種別分析エラー: {e}")
+
+
+# =========================================
+# 台番号別分析
+# =========================================
+
+st.divider()
+
+st.subheader("🔢 台番号別分析")
+
+try:
+
+    dai_sheet = get_spreadsheet(
+        DATA_SPREADSHEET_URL,
+        DATA_ALL_SHEET
+    )
+
+    if dai_sheet is not None:
+
+        dai_data = dai_sheet.get_all_records()
+
+        dai_df = pd.DataFrame(dai_data)
+
+        if not dai_df.empty:
+
+            dai_df.columns = (
+                dai_df.columns.str.strip()
+            )
+
+            dai_df["差枚"] = pd.to_numeric(
+                dai_df["差枚"],
+                errors="coerce"
+            ).fillna(0)
+
+            result = (
+                dai_df
+                .groupby("台番号")["差枚"]
+                .sum()
+                .sort_values(ascending=False)
+            )
+
+            st.dataframe(result)
+
+except Exception as e:
+
+    st.error(f"台別分析エラー: {e}")
