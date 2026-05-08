@@ -342,6 +342,9 @@ st.title("🎰 5.5スロ分析ツール")
 # スプレッドシートリンク
 # =========================================
 
+st.write(MAIN_SPREADSHEET_URL)
+st.write(DATA_SPREADSHEET_URL)
+
 st.markdown("### 📄 スプレッドシート")
 
 col_link1, col_link2 = st.columns(2)
